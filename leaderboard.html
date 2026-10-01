@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#020617">
+  <title>Global Leaderboard</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; padding: 2rem 1rem; color: #f8fafc; background: #020617; }
+    main { width: min(100%, 42rem); margin: 0 auto; }
+    header, section { padding: 1.25rem; border: 1px solid #334155; border-radius: 1rem; background: #0f172a; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    h1 { margin: 0; color: #fbbf24; font-size: clamp(1.25rem, 4vw, 1.75rem); }
+    p { margin: .5rem 0 0; color: #94a3b8; font-size: .9rem; }
+    button { border: 0; border-radius: .6rem; padding: .7rem 1rem; color: #111827; background: #fbbf24; font: inherit; font-weight: 700; cursor: pointer; }
+    button:disabled { cursor: wait; opacity: .6; }
+    #status { min-height: 1.5rem; margin: 0 0 .75rem; color: #94a3b8; font-size: .9rem; }
+    ol { display: grid; gap: .6rem; margin: 0; padding: 0; list-style: none; }
+    li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 1rem; border-radius: .65rem; background: #1e293b; }
+    li:first-child { outline: 1px solid #f59e0b; background: #451a03; }
+    .player { min-width: 0; overflow-wrap: anywhere; }
+    .rank { margin-right: .65rem; color: #fbbf24; font-weight: 700; }
+    .score { flex-shrink: 0; color: #fbbf24; font-weight: 700; }
+    .empty { justify-content: center; color: #94a3b8; text-align: center; }
+    footer { margin-top: .75rem; color: #64748b; font-size: .8rem; text-align: right; }
+    @media (max-width: 420px) { header { align-items: flex-start; flex-direction: column; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>🏆 Global Leaderboard</h1>
+        <p>Top scores from the game server</p>
+      </div>
+      <button id="refreshButton" type="button">Refresh</button>
+    </header>
+
+    <section aria-label="Leaderboard scores">
+      <p id="status" role="status" aria-live="polite">Loading scores…</p>
+      <ol id="leaderboardList"></ol>
+      <footer id="updatedAt"></footer>
+    </section>
+  </main>
+
+  <script>
+    // Dreamlo's public key can be used in browser code. Never put the private key here.
+    const DREAMLO_PUBLIC_KEY = '5fa8af5feb371a09c4c51d17';
+    const LEADERBOARD_URL = `https://dreamlo.com/lb/${DREAMLO_PUBLIC_KEY}/json`;
+
+    const list = document.getElementById('leaderboardList');
+    const status = document.getElementById('status');
+    const refreshButton = document.getElementById('refreshButton');
+    const updatedAt = document.getElementById('updatedAt');
+
+    function safeDecode(value) {
+      try { return decodeURIComponent(value); }
+      catch { return value; }
+    }
+
+    function showMessage(message) {
+      list.replaceChildren();
+      const item = document.createElement('li');
+      item.className = 'empty';
+      item.textContent = message;
+      list.append(item);
+    }
+
+    async function loadLeaderboard() {
+      refreshButton.disabled = true;
+      status.textContent = 'Loading scores…';
+      updatedAt.textContent = '';
+
+      try {
+        const response = await fetch(LEADERBOARD_URL, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
+
+        const data = await response.json();
+        let entries = data?.dreamlo?.leaderboard?.entry;
+        if (!Array.isArray(entries)) entries = entries ? [entries] : [];
+
+        entries.sort((a, b) => Number(b.score) - Number(a.score));
+        if (entries.length === 0) {
+          status.textContent = 'No scores have been recorded yet.';
+          showMessage('Be the first to set a score!');
+        } else {
+          status.textContent = `${entries.length} score${entries.length === 1 ? '' : 's'}`;
+          list.replaceChildren(...entries.map((entry, index) => {
+            const item = document.createElement('li');
+            const player = document.createElement('span');
+            const score = document.createElement('span');
+            player.className = 'player';
+            player.innerHTML = `<span class="rank">#${index + 1}</span>${escapeHTML(safeDecode(String(entry.name ?? 'Anonymous Hero')))}`;
+            score.className = 'score';
+            score.textContent = `${Number(entry.score) || 0} pts`;
+            item.append(player, score);
+            return item;
+          }));
+          updatedAt.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        }
+      } catch (error) {
+        console.error('Unable to load leaderboard:', error);
+        status.textContent = 'Could not load scores.';
+        showMessage('Check your connection and try refreshing.');
+      } finally {
+        refreshButton.disabled = false;
+      }
+    }
+
+    function escapeHTML(value) {
+      return value.replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[character]);
+    }
+
+    refreshButton.addEventListener('click', loadLeaderboard);
+    loadLeaderboard();
+  </script>
+</body>
+</html>

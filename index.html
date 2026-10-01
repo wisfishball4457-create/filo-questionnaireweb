@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ka Bindoy: Hero of Marinduque & Poetry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.8), 0 10px 10px -5px rgba(0, 0, 0, 0.6);
+            touch-action: none;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d97706;
+            border-radius: 4px;
+        }
+        
+        @keyframes slideHint {
+            0%, 100% { transform: translateX(-15px); }
+            50% { transform: translateX(15px); }
+        }
+        .animate-slide-hint {
+            animation: slideHint 2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 sm:p-4 bg-slate-950">
+
+    <header class="w-full max-w-6xl flex flex-col sm:flex-row justify-between items-center mb-3 p-3 bg-slate-900/90 rounded-xl border border-slate-800 backdrop-blur-md shadow-lg gap-2">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-amber-600 border-2 border-amber-400 flex items-center justify-center font-bold text-amber-100 text-xl shadow-inner">
+                ✍️
+            </div>
+            <div>
+                <h1 class="text-lg sm:text-xl font-bold text-amber-400 pixel-font tracking-wide">Ka Bindoy: Hero of Marinduque &amp; Poetry</h1>
+                <p class="text-xs text-slate-400">Hermenegildo Flores • Revolutionary Poet & Hero</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button id="soundToggleBtn" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs flex items-center gap-1.5 transition">
+                <span id="soundIcon">🔊</span> <span id="soundText">Sound ON</span>
+            </button>
+            <button id="pauseBtn" class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-amber-950 font-bold border border-amber-400 rounded-lg text-xs pixel-font transition shadow-md">
+                PAUSE
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-6xl flex flex-col lg:flex-row gap-4 items-center lg:items-start justify-center">
+        
+        <!-- Game Canvas Container -->
+        <div class="relative w-full max-w-[640px] aspect-[4/3] flex items-center justify-center bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-2xl">
+            <canvas id="gameCanvas" width="640" height="480" class="w-full h-full object-contain cursor-grab active:cursor-grabbing"></canvas>
+
+            <!-- Touch/Drag Movement Hint -->
+            <div id="dragHint" class="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none bg-slate-950/80 border border-amber-500/50 rounded-full px-4 py-1.5 flex items-center gap-2 backdrop-blur-md text-amber-300 text-xs shadow-lg transition-opacity duration-500">
+                <span class="animate-slide-hint text-sm">👈</span>
+                <span class="pixel-font text-[10px] tracking-tight">DRAG / SLIDE TO MOVE</span>
+                <span class="animate-slide-hint text-sm">👉</span>
+            </div>
+
+            <!-- Start / Game Over Overlay Screen -->
+            <div id="startOverlay" class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-6 text-center z-20 backdrop-blur-sm">
+                <div class="w-16 h-16 mb-2 bg-amber-900/40 rounded-full border-2 border-amber-500/50 flex items-center justify-center text-3xl shadow-inner">
+                    📜
+                </div>
+                <h2 id="overlayTitle" class="text-xl sm:text-2xl text-amber-400 font-bold pixel-font mb-2 leading-relaxed">MARINDUQUE CALLS!</h2>
+                <p id="overlayDesc" class="text-sm text-slate-300 max-w-md mb-5 leading-relaxed">
+                    Drag Hermenegildo Flores left and right to catch patriotic scrolls, quills, and Katipunan suns. Avoid colonial decrees! Answer trivia every 5 catches for bonus points.
+                </p>
+                <button id="startBtn" class="px-8 py-3 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-xl border-2 border-amber-300 pixel-font text-sm shadow-xl transform active:scale-95 transition">
+                    START REVOLUTION
+                </button>
+            </div>
+        </div>
+
+        <aside class="w-full lg:w-80 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl backdrop-blur-md">
+            
+            <!-- Score & Local Stats -->
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col gap-2">
+                <div class="flex justify-between items-center text-xs text-slate-400">
+                    <span>CURRENT SCORE</span>
+                    <span class="text-amber-400 text-lg font-bold pixel-font" id="hudScore">0</span>
+                </div>
+                <div class="h-px bg-slate-800"></div>
+                <div class="flex justify-between items-center text-xs text-slate-400">
+                    <span>LOCAL HIGH SCORE</span>
+                    <span class="text-emerald-400 text-sm font-bold pixel-font" id="hudHighScore">0</span>
+                </div>
+            </div>
+
+            <!-- Quiz Progress & Correct Trivia Count -->
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3">
+                <div class="flex justify-between items-center text-xs text-slate-300 mb-1">
+                    <span>QUIZ PROGRESS</span>
+                    <span class="text-amber-400 font-bold pixel-font" id="hudCatches">0 / 5</span>
+                </div>
+                <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                    <div id="quizProgressBar" class="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between items-center text-[11px] text-slate-400 mt-2">
+                    <span>CORRECT ANSWERS:</span>
+                    <span id="hudTriviaCorrect" class="text-emerald-400 font-bold pixel-font">0 💡</span>
+                </div>
+            </div>
+
+            <!-- Lives & Level -->
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col items-center justify-center">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">LIVES</span>
+                    <div id="hudLives" class="text-lg flex gap-1">❤️❤️❤️</div>
+                </div>
+                <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col items-center justify-center">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">LEVEL</span>
+                    <span id="hudLevel" class="text-amber-400 font-bold pixel-font text-base">1</span>
+                </div>
+            </div>
+
+            <!-- Live Global Server Leaderboard Widget -->
+            <div class="bg-slate-950/90 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-2">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                        <span>🌍</span> LIVE SERVER TOP SCORES
+                    </span>
+                    <button id="refreshLeaderboardBtn" class="text-[10px] text-slate-400 hover:text-amber-300 bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded transition">
+                        🔄 Refresh
+                    </button>
+                </div>
+                <ul id="liveLeaderboardList" class="flex flex-col gap-1.5 text-xs max-h-48 overflow-y-auto pr-1">
+                    <li class="text-slate-500 text-[11px] text-center py-2">Loading live global scores...</li>
+                </ul>
+            </div>
+
+        </aside>
+    </main>
+
+    <!-- Historical Trivia Modal -->
+    <div id="quizModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border-2 border-amber-500/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <div class="flex items-center gap-2 text-amber-400 pixel-font text-xs mb-2">
+                <span>📖</span> HISTORICAL TRIVIA CHALLENGE
+            </div>
+            <h3 id="quizQuestion" class="text-base sm:text-lg font-bold text-slate-100 mb-4 leading-snug">
+                Question text goes here?
+            </h3>
+
+            <div id="quizOptions" class="flex flex-col gap-2.5 mb-4"></div>
+            <div id="quizFeedback" class="text-sm font-semibold p-3 rounded-lg hidden transition-all"></div>
+
+            <button id="quizContinueBtn" class="w-full mt-3 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl pixel-font text-xs hidden transition shadow-lg">
+                CONTINUE PLAYING ➔
+            </button>
+        </div>
+    </div>
+
+    <!-- Live Server High Score Submission Modal -->
+    <div id="scoreSubmitModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border-2 border-amber-400/80 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center">
+            <div class="w-12 h-12 mx-auto mb-2 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center text-2xl border border-amber-400/40">
+                🏆
+            </div>
+            <h3 class="text-lg font-bold text-amber-400 pixel-font mb-1">GLOBAL LEADERBOARD</h3>
+            <p class="text-xs text-slate-300 mb-4">Submit your high score to the live global server!</p>
+            
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 mb-4 flex justify-around text-xs">
+                <div>
+                    <span class="text-slate-400 block mb-0.5">FINAL SCORE</span>
+                    <span id="submitModalScore" class="text-amber-400 font-bold pixel-font text-base">0</span>
+                </div>
+                <div class="border-r border-slate-800"></div>
+                <div>
+                    <span class="text-slate-400 block mb-0.5">CORRECT TRIVIA</span>
+                    <span id="submitModalTrivia" class="text-emerald-400 font-bold pixel-font text-base">0</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 text-left mb-4">
+                <label for="playerNameInput" class="text-[11px] font-bold text-slate-300">ENTER YOUR REVOLUTIONARY NAME:</label>
+                <input type="text" id="playerNameInput" maxlength="15" placeholder="e.g., Ka Bindoy 1898" class="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-amber-200 text-sm font-semibold focus:outline-none focus:border-amber-400">
+            </div>
+
+            <div class="flex gap-2">
+                <button id="skipSubmitBtn" class="w-1/3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">
+                    SKIP
+                </button>
+                <button id="confirmSubmitBtn" class="w-2/3 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-bold rounded-xl pixel-font text-xs transition shadow-lg">
+                    SUBMIT SCORE
+                </button>
+            </div>
+            <p id="submitStatus" class="text-xs text-rose-300 mt-3" role="status" aria-live="polite"></p>
+        </div>
+    </div>
+
+    <footer class="w-full max-w-6xl text-center py-2 text-xs text-slate-500 mt-2">
+        Designed for Philippine History & Literature Learning • Created in Honor of Hermenegildo Flores (1850s–1898)
+    </footer>
+
+    <script>
+        // Web Audio API Sound Synthesizer
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playCatch() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playBad() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(110, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playCorrect() {
+                if (this.muted || !this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.08 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.08);
+                    osc.stop(this.ctx.currentTime + idx * 0.08 + 0.15);
+                });
+            }
+
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                const notes = [300, 260, 220, 150];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + idx * 0.12 + 0.2);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.12);
+                    osc.stop(this.ctx.currentTime + idx * 0.12 + 0.2);
+                });
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // Historical Trivia Questions Database
+        const triviaDatabase = [
+                  { q: "Saan ipinanganak si Hermenegildo Flores?", options: ["Bulacan", "Cavite", "Manila", "Laguna"], answer: 0 },
+            { q: "Ano ang tanyag na tulang repormista ni Hermenegildo Flores noong 1888/1889?", options: ["Katapusang Hibik ng Pilipinas", "Hibik ng Filipinas sa Inang España", "Dasalan at Tocsohan", "Pag-ibig sa Tinubuang Lupa"], answer: 1 },
+            { q: "Anong anyo ng patulang diyalogo ang ginamit sa 'Hibik ng Filipinas'?", options: ["Balagtasan", "Sarswela", "Hermeneutikong Diyalogo / Karagatan", "Tulang Patnigan / Diyalogo ng Ina at Anak"], answer: 3 },
+            { q: "Anong alyas ang ginamit ni Hermenegildo Flores?", options: ["Plaridel", "Ka Bindoy", "May Pag-asa", "Agapito Bagumbayan"], answer: 1 },
+            { q: "Sino ang sumulat ng 'Sagot ng Inang España sa Hibik ng Filipinas' (1889)?", options: ["Andres Bonifacio", "Marcelo H. del Pilar", "Jose Rizal", "Hermenegildo Flores"], answer: 1 },
+            { q: "Sino ang sumulat ng 'Katapusang Hibik ng Pilipinas' upang makumpleto ang trilohiya?", options: ["Andres Bonifacio", "Emilio Jacinto", "Apolinario Mabini", "Marcelo H. del Pilar"], answer: 0 },
+            { q: "Sa anong wika isinulat ang 'Hibik ng Filipinas'?", options: ["Kastila", "Tagalog", "Ingles", "Bikol"], answer: 1 },
+            { q: "Anong pangunahing hinaing ang binigyang-diin sa tula ni Flores?", options: ["Kawalan ng pondo sa edukasyon", "Ang pang-aabuso ng mga prayleng Espanyol at kahirapan ng bansa", "Ang mataas na buwis sa kalakalan", "Ang hidwaan ng mga Katipunero"], answer: 1 },
+            { q: "Saang lalawigan pinamunuan ni Flores ang mga rebolusyonaryong Katipunero?", options: ["Batangas", "Tayabas (Quezon)", "Marinduque", "Mindoro"], answer: 2 },
+            { q: "Anong opisyal na tungkulin ang hinawakan ni Flores sa Marinduque?", options: ["Gobernadorcillo", "Tagapag-ayos ng Buwis", "Politico-Military Commander / Kapitan ng Rebolusyon", "Kapitan del Barrio"], answer: 2 },
+            { q: "Aling bayan sa Marinduque ang naging sentro ng mga operasyon ni Flores?", options: ["Boac", "Santa Cruz", "Gasan", "Mogpog"], answer: 1 },
+            { q: "Sa anong makasaysayang gusali hinarap ni Flores ang isang malagim na pagkubkob?", options: ["Simbahan ng Boac", "Casa Real sa Santa Cruz", "Plaza de Armas", "Fort Santiago"], answer: 1 },
+            { q: "Anong taon namatay si Flores habang nakikipaglaban sa mga puwersang Espanyol?", options: ["1896", "1897", "1898", "1899"], answer: 2 },
+            { q: "Ano ang nangyari sa Casa Real sa Santa Cruz?", options: ["Ginawang ospital para sa mga sugatan", "Naging lugar ng masaker kung saan pinaslang si Flores at ang kanyang mga tauhan", "Ginamit bilang opisyal na munisipyo ng Espanyol", "Nasunog dahil sa aksidente"], answer: 1 },
+            { q: "Aling lider ng Propaganda ang malapit na nakaugnay kay Flores sa Bulacan?", options: ["Jose Rizal", "Marcelo H. del Pilar", "Graciano Lopez Jaena", "Mariano Ponce"], answer: 1 },
+            { q: "Ano ang pangunahing layunin ng Kilusang Propaganda?", options: ["Magsimula agad ng armadong rebolusyon", "Humingi ng mga reporma at pantay na karapatan mula sa Espanya", "Makipag-alyansa sa Estados Unidos", "Itaguyod ang monarkiya sa Pilipinas"], answer: 1 },
+            { q: "Anong tradisyonal na anyo ng saknong ang ginamit ni Flores sa kanyang tula?", options: ["Tanaga", "Dalit (Apat na taludtod na may 12 pantig bawat isa)", "Diona", "Ambahan"], answer: 1 },
+            { q: "Aling publikasyon ang nagpalaganap ng mga repormistang akda nina Flores at Del Pilar?", options: ["Kalayaan", "La Solidaridad", "Diariong Tagalog", "El Renacimiento"], answer: 1 },
+            { q: "Bakit mahalaga ang trilohiya ng mga tula nina Flores, Del Pilar, at Bonifacio?", options: ["Nagpapakita ito ng pagbabago mula sa paghingi ng reporma tungo sa ganap na armadong rebolusyon", "Ito ang kauna-unahang aklat na naipalimbag sa Pilipinas", "Isinulat ito upang ituro ang wikang Espanyol", "Ito ay koleksyon ng mga awit sa simbahan"], answer: 0 },
+            { q: "Anong dalawang simbolo ang kumakatawan sa dalawahang pamana ni Ka Bindoy?", options: ["Baril at Espada", "Panulat (Tula) at Espada/Kadena (Rebolusyon)", "Watawat at Krus", "Aklat at Korona"], answer: 1 },
+            { q: "Saan matatagpuan ang makasaysayang pananda para sa masaker sa Casa Real?", options: ["Malolos, Bulacan", "Santa Cruz, Marinduque", "Intramuros, Manila", "Kawit, Cavite"], answer: 1 },
+            { q: "Paano inilalarawan ang Espanya sa 'Hibik ng Filipinas'?", options: ["Isang kejam na kaaway", "Isang nag-aalyansang bansa", "Isang Inang pinakikiusapan at hinihingan ng tulong mula sa paghihirap ng anak", "Isang walang kapangyarihang kaharian"], answer: 2 },
+            { q: "Anong propesyon ang ginampanan ni Flores bago siya naging ganap na kumander?", options: ["Guro / Manunulat / Kawani ng Pamahalaan", "Doktor", "Pari", "Mangangalakal"], answer: 0 },
+            { q: "Aling sangay ng lihim na organisasyon ang itinatag ni Flores sa Marinduque?", options: ["Sangay ng Katipunan", "La Liga Filipina", "Masonerya", "Cuerpo de Compromisarios"], answer: 0 },
+            { q: "Aling pangyayari ang kumakatawan sa huling marangal na paglaban ni Flores sa Marinduque?", options: ["Ang Labanan sa San Mateo", "Ang Pagkubkob at Masaker sa Casa Real sa Santa Cruz (1898)", "Ang Paglagda sa Biak-na-Bato", "Ang Pagsuko sa Balintawak"], answer: 1 }
+        ];
+
+        // Dreamlo REST API Configuration
+        const DREAMLO_PUBLIC_KEY = "5fa8af5feb371a09c4c51d17";
+
+        async function fetchGlobalLeaderboard() {
+            const listEl = document.getElementById('liveLeaderboardList');
+            if (!listEl) return;
+
+            try {
+                const res = await fetch(`https://dreamlo.com/lb/${DREAMLO_PUBLIC_KEY}/json`);
+                if (!res.ok) throw new Error("Leaderboard network error");
+                
+                const data = await res.json();
+                if (!data.dreamlo || !data.dreamlo.leaderboard) {
+                    listEl.innerHTML = `<li class="text-slate-500 text-[11px] text-center py-2">No global high scores recorded yet!</li>`;
+                    return;
+                }
+
+                let entries = data.dreamlo.leaderboard.entry;
+                if (!Array.isArray(entries)) entries = entries ? [entries] : [];
+
+                listEl.innerHTML = entries.map((e, idx) => `
+                    <li class="flex justify-between items-center py-1 px-2 rounded ${idx === 0 ? 'bg-amber-950/40 border border-amber-500/30' : 'bg-slate-900/60'}">
+                        <div class="flex items-center gap-1.5 overflow-hidden">
+                            <span class="font-bold text-[10px] ${idx === 0 ? 'text-amber-400' : 'text-slate-500'}">#${idx + 1}</span>
+                            <span class="text-slate-200 font-medium truncate text-[11px]">${escapeHTML(safeDecode(e.name))}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-[11px] shrink-0">
+                            <span class="text-amber-400 font-bold pixel-font">${e.score}</span>
+                            <span class="text-emerald-400 text-[10px]">(${e.seconds || 0}💡)</span>
+                        </div>
+                    </li>
+                `).join('');
+
+            } catch (err) {
+                console.warn("Unable to connect to Dreamlo server:", err);
+                listEl.innerHTML = `<li class="text-slate-500 text-[11px] text-center py-2">Offline or server unavailable</li>`;
+            }
+        }
+
+        async function submitGlobalScore(name, finalScore, correctTrivia) {
+            const statusEl = document.getElementById('submitStatus');
+            try {
+                const response = await fetch('/api/submit-score', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name.trim() || "Anonymous Hero",
+                        score: finalScore,
+                        rightAnswers: correctTrivia
+                    })
+                });
+                const responseText = await response.text();
+                let result = null;
+                try {
+                    result = responseText ? JSON.parse(responseText) : null;
+                } catch {
+                    throw new Error('Score server response was invalid. Start the app with npm start and open http://localhost:3000.');
+                }
+                if (!result) {
+                    throw new Error('No response from the score server. Start the app with npm start and open http://localhost:3000.');
+                }
+                if (!response.ok) throw new Error(result.error || 'Score submission failed.');
+
+                await fetchGlobalLeaderboard();
+                statusEl.textContent = "Score submitted successfully.";
+                return true;
+            } catch (err) {
+                console.error("Failed to submit score to live server:", err);
+                statusEl.textContent = err.message || "Score could not be submitted. Check your connection and server configuration.";
+                return false;
+            }
+        }
+
+        function safeDecode(value) {
+            try { return decodeURIComponent(String(value ?? "")); }
+            catch { return String(value ?? ""); }
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let isRunning = false;
+        let isPaused = false;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('kaBindoyHighScore') || '0', 10);
+        let catchesCount = 0;
+        let correctTriviaCount = 0;
+        let lives = 3;
+        let level = 1;
+        let animationFrameId = null;
+        let quizActive = false;
+        let quizIndex = 0;
+
+        const player = {
+            x: canvas.width / 2 - 25,
+            y: canvas.height - 95,
+            width: 50,
+            height: 75,
+            speed: 7,
+            facingRight: true,
+            isDragging: false
+        };
+
+        let items = [];
+        let spawnTimer = 0;
+
+        const keys = { left: false, right: false };
+
+        const itemTypes = [
+            { type: 'scroll', name: 'Hibik Scroll', points: 20, symbol: '📜', isGood: true, color: '#f59e0b' },
+            { type: 'quill', name: 'Quill & Ink', points: 15, symbol: '🪶', isGood: true, color: '#3b82f6' },
+            { type: 'flag', name: 'Katipunan Sun', points: 25, symbol: '☀️', isGood: true, color: '#ef4444' },
+            { type: 'star', name: 'Independence Star', points: 30, symbol: '⭐', isGood: true, color: '#eab308' },
+            { type: 'decree', name: 'Abusive Decree', points: -10, symbol: '📜❌', isGood: false, color: '#64748b' }
+        ];
+
+        // HUD Elements
+        const hudScore = document.getElementById('hudScore');
+        const hudHighScore = document.getElementById('hudHighScore');
+        const hudCatches = document.getElementById('hudCatches');
+        const hudTriviaCorrect = document.getElementById('hudTriviaCorrect');
+        const hudLives = document.getElementById('hudLives');
+        const hudLevel = document.getElementById('hudLevel');
+        const quizProgressBar = document.getElementById('quizProgressBar');
+        const dragHint = document.getElementById('dragHint');
+
+        const startOverlay = document.getElementById('startOverlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayDesc = document.getElementById('overlayDesc');
+        const startBtn = document.getElementById('startBtn');
+
+        const quizModal = document.getElementById('quizModal');
+        const quizQuestion = document.getElementById('quizQuestion');
+        const quizOptions = document.getElementById('quizOptions');
+        const quizFeedback = document.getElementById('quizFeedback');
+        const quizContinueBtn = document.getElementById('quizContinueBtn');
+
+        const scoreSubmitModal = document.getElementById('scoreSubmitModal');
+        const submitModalScore = document.getElementById('submitModalScore');
+        const submitModalTrivia = document.getElementById('submitModalTrivia');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const confirmSubmitBtn = document.getElementById('confirmSubmitBtn');
+        const skipSubmitBtn = document.getElementById('skipSubmitBtn');
+
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const refreshLeaderboardBtn = document.getElementById('refreshLeaderboardBtn');
+
+        hudHighScore.textContent = highScore;
+
+        // Background & Character Renderers
+        function drawCasaRealBackground() {
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGrad.addColorStop(0, '#1e1b4b');
+            skyGrad.addColorStop(0.4, '#431407');
+            skyGrad.addColorStop(0.7, '#7c2d12');
+            skyGrad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Mountains
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.moveTo(0, 260);
+            ctx.lineTo(80, 220);
+            ctx.lineTo(200, 270);
+            ctx.lineTo(350, 210);
+            ctx.lineTo(500, 260);
+            ctx.lineTo(640, 230);
+            ctx.lineTo(640, 380);
+            ctx.lineTo(0, 380);
+            ctx.fill();
+
+            // Casa Real - Base Stone Structure
+            const wallY = 250;
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(40, wallY + 40, 560, 110);
+
+            // Brick Lines
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            for (let y = wallY + 50; y < wallY + 150; y += 12) {
+                ctx.beginPath();
+                ctx.moveTo(40, y);
+                ctx.lineTo(600, y);
+                ctx.stroke();
+            }
+
+            // Upper Wooden Floor
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(30, wallY - 30, 580, 70);
+
+            // Capiz Windows
+            for (let i = 0; i < 5; i++) {
+                const winX = 65 + i * 110;
+                ctx.fillStyle = '#27272a';
+                ctx.fillRect(winX, wallY - 15, 45, 35);
+                ctx.fillStyle = '#fef08a';
+                ctx.globalAlpha = 0.7;
+                ctx.fillRect(winX + 4, wallY - 11, 37, 27);
+                ctx.globalAlpha = 1.0;
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(winX, wallY - 15, 45, 35);
+            }
+
+            // Roof
+            ctx.fillStyle = '#9a3412';
+            ctx.beginPath();
+            ctx.moveTo(10, wallY - 30);
+            ctx.lineTo(320, wallY - 65);
+            ctx.lineTo(630, wallY - 30);
+            ctx.fill();
+
+            // Katipunan Flag
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(270, wallY - 15, 100, 25);
+            ctx.fillStyle = '#fef08a';
+            ctx.font = 'bold 10px monospace';
+            ctx.fillText('MARINDUQUE', 276, wallY + 2);
+
+            // Ground Plaza
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(0, canvas.height - 80, canvas.width, 4);
+        }
+
+        function drawKaBindoy(x, y, facingRight) {
+            ctx.save();
+            if (!facingRight) {
+                ctx.translate(x + player.width, y);
+                ctx.scale(-1, 1);
+                x = 0;
+                y = 0;
+            }
+
+            if (player.isDragging) {
+                ctx.fillStyle = '#f59e0b';
+                ctx.globalAlpha = 0.25;
+                ctx.beginPath();
+                ctx.ellipse(x + player.width / 2, y + player.height / 2, 35, 42, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+
+            // Salakot Hat
+            ctx.fillStyle = '#d97706';
+            ctx.beginPath();
+            ctx.moveTo(x + 5, y + 18);
+            ctx.lineTo(x + 25, y + 2);
+            ctx.lineTo(x + 45, y + 18);
+            ctx.fill();
+
+            // Head / Face
+            ctx.fillStyle = '#fcd34d';
+            ctx.fillRect(x + 15, y + 22, 20, 16);
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(x + 28, y + 26, 3, 4);
+
+            // Barong Tagalog & Red Sash
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(x + 12, y + 38, 26, 24);
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(x + 12, y + 42);
+            ctx.lineTo(x + 38, y + 58);
+            ctx.lineTo(x + 38, y + 62);
+            ctx.lineTo(x + 12, y + 46);
+            ctx.fill();
+
+            // Trousers & Boots
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(x + 14, y + 62, 10, 13);
+            ctx.fillRect(x + 26, y + 62, 10, 13);
+
+            ctx.restore();
+        }
+
+        function getCanvasCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            let clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+            return (clientX - rect.left) * scaleX;
+        }
+
+        function setPlayerPositionFromX(canvasX) {
+            const prevX = player.x;
+            player.x = Math.max(0, Math.min(canvas.width - player.width, canvasX - player.width / 2));
+            if (player.x > prevX + 1) player.facingRight = true;
+            else if (player.x < prevX - 1) player.facingRight = false;
+        }
+
+        function startDrag(e) {
+            if (!isRunning || isPaused || quizActive) return;
+            player.isDragging = true;
+            setPlayerPositionFromX(getCanvasCoordinates(e));
+            if (dragHint) dragHint.style.opacity = '0';
+        }
+
+        function moveDrag(e) {
+            if (!player.isDragging || !isRunning || isPaused || quizActive) return;
+            e.preventDefault();
+            setPlayerPositionFromX(getCanvasCoordinates(e));
+        }
+
+        function endDrag() {
+            player.isDragging = false;
+        }
+
+        canvas.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', moveDrag);
+        window.addEventListener('mouseup', endDrag);
+
+        canvas.addEventListener('touchstart', startDrag, { passive: false });
+        window.addEventListener('touchmove', moveDrag, { passive: false });
+        window.addEventListener('touchend', endDrag);
+
+        function spawnItem() {
+            const randomType = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+            items.push({
+                x: Math.random() * (canvas.width - 40) + 10,
+                y: -30,
+                width: 32,
+                height: 32,
+                speed: 2 + Math.random() * 2 + (level * 0.4),
+                type: randomType
+            });
+        }
+
+        function drawItem(item) {
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(item.type.symbol, item.x + item.width / 2, item.y + item.height / 2);
+        }
+
+        function update() {
+            if (!isRunning || isPaused || quizActive) return;
+
+            if (!player.isDragging) {
+                if (keys.left && player.x > 0) {
+                    player.x -= player.speed;
+                    player.facingRight = false;
+                }
+                if (keys.right && player.x < canvas.width - player.width) {
+                    player.x += player.speed;
+                    player.facingRight = true;
+                }
+            }
+
+            spawnTimer++;
+            if (spawnTimer >= Math.max(30, 75 - (level * 5))) {
+                spawnItem();
+                spawnTimer = 0;
+            }
+
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.y += item.speed;
+
+                if (
+                    item.x < player.x + player.width &&
+                    item.x + item.width > player.x &&
+                    item.y < player.y + player.height &&
+                    item.y + item.height > player.y
+                ) {
+                    if (item.type.isGood) {
+                        score += item.type.points;
+                        catchesCount++;
+                        sound.playCatch();
+
+                        if (catchesCount > 0 && catchesCount % 5 === 0) {
+                            items.splice(i, 1);
+                            updateHUD();
+                            triggerQuizModal();
+                            return;
+                        }
+                    } else {
+                        score = Math.max(0, score + item.type.points);
+                        lives--;
+                        sound.playBad();
+                        if (lives <= 0) {
+                            gameOver();
+                            return;
+                        }
+                    }
+                    items.splice(i, 1);
+                    updateHUD();
+                    continue;
+                }
+
+                if (item.y > canvas.height - 80) {
+                    items.splice(i, 1);
+                    updateHUD();
+                }
+            }
+
+            level = Math.floor(score / 150) + 1;
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawCasaRealBackground();
+            drawKaBindoy(player.x, player.y, player.facingRight);
+            items.forEach(drawItem);
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            if (isRunning) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function updateHUD() {
+            hudScore.textContent = score;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('kaBindoyHighScore', highScore);
+                hudHighScore.textContent = highScore;
+            }
+
+            const currentProgress = catchesCount % 5;
+            hudCatches.textContent = `${currentProgress} / 5`;
+            quizProgressBar.style.width = `${(currentProgress / 5) * 100}%`;
+            hudTriviaCorrect.textContent = `${correctTriviaCount} 💡`;
+
+            let hearts = '';
+            for (let i = 0; i < lives; i++) hearts += '❤';
+            hudLives.textContent = hearts || '💀';
+            hudLevel.textContent = level;
+        }
+
+        function triggerQuizModal() {
+            quizActive = true;
+            isPaused = true;
+            player.isDragging = false;
+            
+            const qData = triviaDatabase[quizIndex % triviaDatabase.length];
+            quizIndex++;
+
+            quizQuestion.textContent = qData.q;
+            quizOptions.innerHTML = '';
+            quizFeedback.classList.add('hidden');
+            quizContinueBtn.classList.add('hidden');
+
+            qData.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium text-slate-200 transition flex items-center justify-between";
+                btn.innerHTML = `<span>${optText}</span> <span class="text-xs text-slate-500">Option ${idx + 1}</span>`;
+                
+                btn.onclick = () => {
+                    const allBtns = quizOptions.querySelectorAll('button');
+                    allBtns.forEach(b => b.disabled = true);
+
+                    if (idx === qData.answer) {
+                        btn.className = "w-full text-left p-3 rounded-xl bg-emerald-900/60 border-2 border-emerald-500 text-sm font-bold text-emerald-200";
+                        quizFeedback.className = "text-xs font-semibold p-3 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-300";
+                        quizFeedback.innerHTML = `🎉 <strong>CORRECT! (+50 Bonus Points)</strong>${qData.fact ? `<br>${qData.fact}` : ''}`;
+                        score += 50;
+                        correctTriviaCount++;
+                        sound.playCorrect();
+                    } else {
+                        btn.className = "w-full text-left p-3 rounded-xl bg-rose-900/60 border-2 border-rose-500 text-sm font-bold text-rose-200";
+                        allBtns[qData.answer].className = "w-full text-left p-3 rounded-xl bg-emerald-900/40 border border-emerald-500/50 text-sm text-emerald-300";
+                        quizFeedback.className = "text-xs font-semibold p-3 rounded-lg bg-rose-950/80 border border-rose-500/50 text-rose-300";
+                        quizFeedback.innerHTML = `❌ <strong>INCORRECT</strong>${qData.fact ? `<br>${qData.fact}` : ''}`;
+                        sound.playBad();
+                    }
+
+                    quizFeedback.classList.remove('hidden');
+                    quizContinueBtn.classList.remove('hidden');
+                    updateHUD();
+                };
+
+                quizOptions.appendChild(btn);
+            });
+
+            quizModal.classList.remove('hidden');
+        }
+
+        quizContinueBtn.onclick = () => {
+            quizModal.classList.add('hidden');
+            quizActive = false;
+            isPaused = false;
+        };
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            catchesCount = 0;
+            correctTriviaCount = 0;
+            lives = 3;
+            level = 1;
+            items = [];
+            player.x = canvas.width / 2 - player.width / 2;
+            player.isDragging = false;
+            isRunning = true;
+            isPaused = false;
+            quizActive = false;
+            
+            updateHUD();
+            startOverlay.classList.add('hidden');
+            if (dragHint) dragHint.style.opacity = '1';
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            gameLoop();
+        }
+
+        function gameOver() {
+            isRunning = false;
+            player.isDragging = false;
+            sound.playGameOver();
+
+            // Populate Score Submission Modal
+            document.getElementById('submitStatus').textContent = "";
+            submitModalScore.textContent = score;
+            submitModalTrivia.textContent = correctTriviaCount;
+            scoreSubmitModal.classList.remove('hidden');
+        }
+
+        confirmSubmitBtn.onclick = async () => {
+            const name = playerNameInput.value.trim() || "Ka Bindoy Fan";
+            confirmSubmitBtn.disabled = true;
+            confirmSubmitBtn.textContent = "SUBMITTING...";
+
+            const submitted = await submitGlobalScore(name, score, correctTriviaCount);
+
+            confirmSubmitBtn.disabled = false;
+            confirmSubmitBtn.textContent = "SUBMIT SCORE";
+            if (!submitted) return;
+
+            scoreSubmitModal.classList.add('hidden');
+
+            overlayTitle.textContent = "HEROIC EFFORT!";
+            overlayDesc.innerHTML = `You scored <strong>${score}</strong> points and correctly answered <strong>${correctTriviaCount}</strong> trivia questions!`;
+            startBtn.textContent = "PLAY AGAIN";
+            startOverlay.classList.remove('hidden');
+        };
+
+        skipSubmitBtn.onclick = () => {
+            scoreSubmitModal.classList.add('hidden');
+            overlayTitle.textContent = "HEROIC EFFORT!";
+            overlayDesc.innerHTML = `You scored <strong>${score}</strong> points in defense of Marinduque!`;
+            startBtn.textContent = "PLAY AGAIN";
+            startOverlay.classList.remove('hidden');
+        };
+
+        function togglePause() {
+            if (!isRunning || quizActive) return;
+            isPaused = !isPaused;
+            player.isDragging = false;
+            pauseBtn.textContent = isPaused ? "RESUME" : "PAUSE";
+        }
+
+        // Global Event Listeners
+        startBtn.onclick = startGame;
+        pauseBtn.onclick = togglePause;
+        refreshLeaderboardBtn.onclick = fetchGlobalLeaderboard;
+
+        soundToggleBtn.onclick = () => {
+            sound.init();
+            sound.muted = !sound.muted;
+            document.getElementById('soundIcon').textContent = sound.muted ? "🔇" : "🔊";
+            document.getElementById('soundText').textContent = sound.muted ? "Sound OFF" : "Sound ON";
+        };
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+            if (e.key === 'p' || e.key === 'P') togglePause();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        });
+
+        window.onload = () => {
+            drawCasaRealBackground();
+            drawKaBindoy(player.x, player.y, true);
+            fetchGlobalLeaderboard();
+        };
+    </script>
+</body>
+</html>
