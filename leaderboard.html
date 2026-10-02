@@ -35,7 +35,10 @@
         <h1>🏆 Global Leaderboard</h1>
         <p>Top scores from the game server</p>
       </div>
-      <button id="refreshButton" type="button">Refresh</button>
+      <div style="display: flex; gap: .5rem; flex-wrap: wrap;">
+        <button id="clearButton" type="button" style="background: #ef4444; color: white;">Clear</button>
+        <button id="refreshButton" type="button">Refresh</button>
+      </div>
     </header>
 
     <section aria-label="Leaderboard scores">
@@ -53,6 +56,7 @@
     const list = document.getElementById('leaderboardList');
     const status = document.getElementById('status');
     const refreshButton = document.getElementById('refreshButton');
+    const clearButton = document.getElementById('clearButton');
     const updatedAt = document.getElementById('updatedAt');
 
     function safeDecode(value) {
@@ -115,7 +119,31 @@
       })[character]);
     }
 
+    async function clearLeaderboard() {
+      clearButton.disabled = true;
+      status.textContent = 'Clearing leaderboard…';
+      try {
+        const response = await fetch('/api/clear-leaderboard', { method: 'POST' });
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(result?.error || 'Could not clear leaderboard.');
+        }
+
+        status.textContent = 'Leaderboard cleared successfully.';
+        updatedAt.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        await loadLeaderboard();
+      } catch (error) {
+        console.error('Unable to clear leaderboard:', error);
+        status.textContent = error.message || 'Could not clear leaderboard.';
+        showMessage('Add a valid DREAMLO_PRIVATE_KEY to .env to enable clearing.');
+      } finally {
+        clearButton.disabled = false;
+      }
+    }
+
     refreshButton.addEventListener('click', loadLeaderboard);
+    clearButton.addEventListener('click', clearLeaderboard);
     loadLeaderboard();
   </script>
 </body>

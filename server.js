@@ -8,8 +8,12 @@ const port = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '8kb' }));
 app.use(express.static(__dirname));
 
+function getDreamloPrivateKey() {
+  return process.env.DREAMLO_PRIVATE_KEY?.trim();
+}
+
 app.post('/api/submit-score', async (req, res) => {
-  const privateKey = process.env.DREAMLO_PRIVATE_KEY?.trim();
+  const privateKey = getDreamloPrivateKey();
   const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
   const score = Number(req.body?.score);
   const rightAnswers = Number(req.body?.rightAnswers);
@@ -39,6 +43,30 @@ app.post('/api/submit-score', async (req, res) => {
   } catch (error) {
     console.error('Dreamlo request failed:', error);
     res.status(502).json({ error: 'Could not reach Dreamlo.' });
+  }
+});
+
+app.post('/api/clear-leaderboard', async (req, res) => {
+  const privateKey = getDreamloPrivateKey();
+
+  if (!privateKey) {
+    return res.status(503).json({ error: 'Server is missing DREAMLO_PRIVATE_KEY in .env.' });
+  }
+
+  try {
+    const url = `https://dreamlo.com/lb/${privateKey}/clear`;
+    const response = await fetch(url);
+    const result = await response.text();
+
+    if (!response.ok || /^\s*fail/i.test(result)) {
+      console.error('Dreamlo rejected clear request:', result);
+      return res.status(502).json({ error: 'Dreamlo rejected the clear request.' });
+    }
+
+    res.json({ success: true, message: 'Leaderboard cleared.' });
+  } catch (error) {
+    console.error('Dreamlo clear request failed:', error);
+    res.status(502).json({ error: 'Could not clear Dreamlo leaderboard.' });
   }
 });
 
